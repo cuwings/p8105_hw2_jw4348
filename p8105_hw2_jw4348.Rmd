@@ -73,3 +73,69 @@ str(data_538)
 ```
 
 - Let's talk about the 538 datasets. The `pols` data has `r nrow(pols)` observations and `r ncol(pols)` variables and tells us about the party affiliation distribution (democrat or republican) for governors and senators for a given year from years `r pols |> pull(year) |> min()` to `r pols |> pull(year) |> max()`. It also tells us whether the sitting president was a democrat or republican. The `snp` data has `r nrow(snp)` observations and `r ncol(snp)` variables, ranging from years `r snp |> pull(year) |> min()` to `r snp |> pull(year) |> max()`. The `unemployment` data has `r nrow(unemployment)` observations and `r ncol(unemployment)` variables ranging from years `r unemployment |> pull(year) |> min()` to `r unemployment |> pull(year) |> max()`. In Januarys in or after 1975 in which a democrat was president, the **average unemployment rate was `r filter(data_538, month == "January", year >= 1975, president == "dem") |> pull(unemployment) |> mean() |> round(2)`**.  The average unemployment rate over the same time period in which a republican was president was `r filter(data_538, month == "January", year >= 1975, president == "gop") |> pull(unemployment) |> mean() |> round(2)`.
+
+## Problem 2: 
+
+- First we read and clean the `Mr. Trash Wheel sheet`.
+
+```{r}
+MrTrashWheel_df = 
+  readxl::read_excel("./data/202309 Trash Wheel Collection Data.xlsx", sheet = "Mr. Trash Wheel", range = "A2:N586") |> 
+  janitor::clean_names() |>
+  drop_na(dumpster) |>
+  mutate(
+    homes_powered = (weight_tons * 500) / 30,
+    type = "Mr Trash Wheel",
+    year = as.double(year)
+  )
+ 
+MrTrashWheel_df
+```
+
+- Next we read and clean the `Professor Trash Wheel`.
+
+```{r}
+ProfessorTrashWheel_df = 
+  readxl::read_excel("./data/202309 Trash Wheel Collection Data.xlsx", sheet = "Professor Trash Wheel", range = "A2:M108") |> 
+  janitor::clean_names() |>
+  drop_na(dumpster) |>
+  mutate(
+    homes_powered = (weight_tons * 500) / 30,
+    type = "Professor Trash Wheel"
+    )
+
+ProfessorTrashWheel_df
+```
+
+- Then we read and clean the `Gwynnda Trash Wheel`.
+
+```{r}
+GwynndaTrashWheel_df = 
+  readxl::read_excel("./data/202309 Trash Wheel Collection Data.xlsx", sheet =   "Gwynnda Trash Wheel", range = "A2:L157") |> 
+  janitor::clean_names() |>
+  drop_na(dumpster) |>
+  mutate(
+    homes_powered = (weight_tons * 500) / 30,
+    type = "Gwynnda Trash Wheel"
+  )
+
+GwynndaTrashWheel_df
+```
+
+- Now we merge the three datasets, and proce a single tidy dataset named `Trashtidy_df`.
+
+```{r}
+Trashtidy_df = 
+  bind_rows(MrTrashWheel_df, ProfessorTrashWheel_df, GwynndaTrashWheel_df) |>
+  janitor::clean_names() 
+
+Trashtidy_df
+```
+
+- Blow is the description of dataset `Trashtidy_df`:
+  - The number of observations in the resulting dataset `Trashtidy_df` is **`r nrow(Trashtidy_df)`**. 
+  - There are **`r ncol(Trashtidy_df)`** variables.
+  - The key variables in this dataset are **dumpster**, **month**, **year**, **date** and etc. 
+  - All the variables are **`r colnames(Trashtidy_df)`**. 
+  - The total weight of trash collected by Professor Trash Wheel was **`r sum(filter(Trashtidy_df,type == "Professor Trash Wheel") |> pull(weight_tons))`** tons.
+  - The total number of cigarette butts collected by Gwynnda in July of 2021 was **`r sum(filter(Trashtidy_df,type == "Gwynnda Trash Wheel", month == "July", year == "2021") |> pull(cigarette_butts))`**.
