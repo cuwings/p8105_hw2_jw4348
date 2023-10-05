@@ -132,7 +132,7 @@ Trashtidy_df =
 Trashtidy_df
 ```
 
-- Blow is the description of dataset `Trashtidy_df`:
+- Below is the description of dataset `Trashtidy_df`:
   - The number of observations in the resulting dataset `Trashtidy_df` is **`r nrow(Trashtidy_df)`**. 
   - There are **`r ncol(Trashtidy_df)`** variables.
   - The key variables in this dataset are **dumpster**, **month**, **year**, **date** and etc. 
