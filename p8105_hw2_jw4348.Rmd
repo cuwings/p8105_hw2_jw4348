@@ -139,3 +139,128 @@ Trashtidy_df
   - All the variables are **`r colnames(Trashtidy_df)`**. 
   - The total weight of trash collected by Professor Trash Wheel was **`r sum(filter(Trashtidy_df,type == "Professor Trash Wheel") |> pull(weight_tons))`** tons.
   - The total number of cigarette butts collected by Gwynnda in July of 2021 was **`r sum(filter(Trashtidy_df,type == "Gwynnda Trash Wheel", month == "July", year == "2021") |> pull(cigarette_butts))`**.
+  
+## Problem 3: 
+
+- First we import, clean, and tidy the `MCI_baseline` dataset.
+
+```{r}
+bl_df =
+  read_csv("./data/data_mci/MCI_baseline.csv", skip = 1, na = ".")|>
+  janitor::clean_names() |>
+  rename(study_id = id) |> 
+  filter(current_age < age_at_onset | is.na(age_at_onset)) |> 
+  mutate(
+    sex = 
+      case_match(
+        sex, 
+        1 ~ "male", 
+        0 ~ "female"),
+    apoe4 = 
+      case_match(
+        apoe4, 
+        1 ~ "apoe4 carrier", 
+        0 ~ "apoe4 non-carrier"),
+    age_at_onset = as.double(age_at_onset))
+
+bl_df
+```
+
+- Below are the important steps when I am cleaning the `MCI_baseline` dataset:
+  - I used `read_csv` to read the baseline sas file. Within that, I used `skip = 1` to skip the first row because it is data-unrelated. 
+  - I used `janitor::clean_names()` to clean the column names.
+  - I used `rename(study_id = id)` to mactch the the name variable **id** to be the same as the one in later biomaker dataset.
+  - I used `filter(current_age < age_at_onset | is.na(age_at_onset))` to keep the participants whoes current age is smaller than age of the onset, also keep the participants free of MCI at the age at onset.
+  - I used `mutate(case_match)` to appropriately encoded variables **sex** and **apoe4**.
+  
+- Below are the relevant features of `bl_df` dataset:
+  - There were **`r nrow(bl_df)`** participants recruited.
+  - Of recruited people, there are **`r count(filter(bl_df, age_at_onset != "NA"))`** developed MCI.
+  - The average baseline age is **`r mean(pull(bl_df, current_age))`**.
+  - The proportion of women in the study are APOE4 carriers is **`r nrow(filter(bl_df, sex == "female", apoe4 == "apoe4 carrier"))/nrow(filter(bl_df, sex == "female"))`**.
+
+- Next we import, clean, and tidy the `mci_amyloid` dataset.
+
+```{r}
+bio_df =
+  read_csv("./data/data_mci/mci_amyloid.csv", skip = 1)|>
+  janitor::clean_names() |>
+  pivot_longer(
+    baseline:time_8,
+    names_to = "visit", 
+    values_to = "time_elapsed",
+    names_prefix = "time_") |> 
+  mutate(
+    visit = replace(visit, visit == "baseline", "0"))
+
+bio_df
+```
+
+- Below are the important steps when I am cleaning the `mci_amyloid` dataset:
+  - A lot of code are the similar when I cleaned the baseline dataset.
+  - I used `pivot_longer()` to make this dataset from wider to longer, because the visits are spread across the column, which correponds to five times.
+  - I used `names_prefix` to get rid of the prefix **time_**.
+  - Also I used `mutate(visit = replace())` to change **baseline** to **0** to match other visit data.
+  
+- Below are the relevant features of `bio_df` dataset:
+  - There are **`r nrow(bio_df)`** observations in `bio_df` dataset.
+  - There are **`r ncol(bio_df)`** variables, which are **`r colnames(bio_df)`**.
+
+- Next I wanna check whether some participants appear in only the baseline or amyloid datasets.
+
+```{r}
+baseline_unique_participants =
+  bl_df |> 
+  dplyr::anti_join(bio_df, by = "study_id")
+```
+
+- There are **`r nrow(baseline_unique_participants)`** participants appear in only the baseline datasets.
+
+```{r}
+biomarker_unique_participants =
+  bio_df |> 
+  dplyr::anti_join(bl_df, by = "study_id")
+```
+
+- There are **`r nrow(biomarker_unique_participants)`** observations appear in only the amyloid dataset. However, because every participants have five visit in cleaned and tidied amyloid dataset, we also can divide the observation by 5 to get **`r nrow(biomarker_unique_participants)/5`** participants only appear in the amyloid dataset.
+
+- Finally I will combine the demographic and biomarker datasets
+
+```{r}
+comb_data = 
+  inner_join(bio_df, bl_df, by = "study_id")
+
+comb_data
+```
+
+- There are **`r nrow(comb_data)`** observations or **`r nrow(comb_data)/5`** participants appear in both the baseline and amyloid datasets. There are **`r ncol(comb_data)`** variables in these combined datasets, which are **`r colnames(comb_data)`**.
+
+- However, like I said previously, there are 5 visit in tidy version of amyloid dataset. Therefore if we want to know how many people both in the tidied baseline and non-tidy amyloid datasets. We should do this.
+
+```{r}
+widebio_df =
+  read_csv("./data/data_mci/mci_amyloid.csv", skip = 1)|>
+  janitor::clean_names()
+
+widebio_df
+```
+
+```{r}
+comb_data2 = 
+  inner_join(bl_df, widebio_df, by = "study_id")
+
+comb_data2
+```
+
+- There are **`r nrow(comb_data2)`** participants appear in both the tidy-baseline and untidy-amyloid datasets. There are **`r ncol(comb_data2)`** variables in these combined datasets, which are **`r colnames(comb_data2)`**.
+
+
+- Last but not the least, I will export the combined dataset.
+
+```{r}
+write_csv(comb_data,"data/comb_data.csv")
+```
+
+```{r}
+write_csv(comb_data2,"data/comb_data2.csv")
+```
